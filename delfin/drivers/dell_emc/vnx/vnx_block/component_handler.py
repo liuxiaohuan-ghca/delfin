@@ -20,6 +20,7 @@ from oslo_utils import units
 from delfin import exception
 from delfin.common import constants
 from delfin.drivers.dell_emc.vnx.vnx_block import consts
+from delfin.drivers.utils.tools import Tools
 
 LOG = log.getLogger(__name__)
 
@@ -443,3 +444,46 @@ class ComponentHandler(object):
             name = '%s-%s' % (iscsi_port.get('sp'), iscsi_port.get('port_id'))
             iscsi_port_map[name] = iscsi_port
         return iscsi_port_map
+
+    def collect_perf_metrics(self, storage_id, resource_metrics,
+                             start_time, end_time):
+        metrics = []
+        try:
+            # 查询性能文件列表
+            archives = self.navi_handler.get_archives()
+            print('archives==={}'.format(archives))
+            # 通过时间参数过滤出需要的性能文件
+            archive_file_list = []
+            last_file = ''
+            tools = Tools()
+            print("start_time=={}==end_time==={}".format(start_time, end_time))
+            for archive_info in (archives or []):
+                collection_timestamp = tools.time_str_to_timestamp(archive_info.get('collection_time'), consts.TIME_PATTERN)
+                print("collection_time=={}=={}==={}".format(archive_info.get('collection_time'), collection_timestamp, archive_info.get('archive_name')))
+                if collection_timestamp<start_time:
+                    last_file = archive_info.get('archive_name')
+                    continue
+                else:
+                    if last_file:
+                        archive_file_list.append(last_file)
+                        last_file = ''
+                    if collection_timestamp<end_time:
+                        archive_file_list.append(archive_info.get('archive_name'))
+            print('archive_file_list=={}'.format(archive_file_list))
+            # 下载并转换性能文件
+            # 解析性能文件cvs
+            # 过滤出需要的性能数据
+            # 组装需要输出的数据
+            # 删除性能文件
+            print()
+        except exception.DelfinException as err:
+            err_msg = "Failed to collect metrics from VnxBlockStor: %s" % \
+                      (six.text_type(err))
+            LOG.error(err_msg)
+            raise err
+        except Exception as err:
+            err_msg = "Failed to collect metrics from VnxBlockStor: %s" % \
+                      (six.text_type(err))
+            LOG.error(err_msg)
+            raise exception.InvalidResults(err_msg)
+        return metrics

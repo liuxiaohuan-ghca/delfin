@@ -606,3 +606,26 @@ class NaviHandler(object):
             raise e
         finally:
             self.session_lock.release()
+
+    def get_archives(self):
+        return self.get_resources_info(consts.GET_ARCHIVE_API,
+                                       self.cli_archives_to_list)
+
+    def cli_archives_to_list(self, resource_info):
+        obj_list = []
+        try:
+            obj_infos = resource_info.split('\n')
+            for obj_info in obj_infos:
+                str_line = obj_info.strip()
+                if str_line:
+                    archive_infos = str_line.split()
+                    if archive_infos and len(archive_infos)==5:
+                        obj_model = {}
+                        obj_model['collection_time'] = "%s %s" % (archive_infos[2], archive_infos[3])
+                        obj_model['archive_name'] = archive_infos[4]
+                        obj_list.append(obj_model)
+        except Exception as e:
+            err_msg = "arrange archives info error: %s", six.text_type(e)
+            LOG.error(err_msg)
+            raise exception.InvalidResults(err_msg)
+        return obj_list
