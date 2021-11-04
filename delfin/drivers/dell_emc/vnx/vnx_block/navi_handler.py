@@ -151,10 +151,12 @@ class NaviHandler(object):
         # Execute commands to query data and analyze
         try:
             command_str = self.get_cli_command_str(sub_command=sub_command)
+            print('command_str==={}'.format(command_str))
             resource_info = self.navi_exe(command_str.split())
             return_value = None
             if resource_info:
-                return_value = analyse_type(resource_info)
+                if analyse_type:
+                    return_value = analyse_type(resource_info)
         except Exception as e:
             err_msg = "Failed to get resources info from %s: %s" \
                       % (sub_command, six.text_type(e))
@@ -629,3 +631,10 @@ class NaviHandler(object):
             LOG.error(err_msg)
             raise exception.InvalidResults(err_msg)
         return obj_list
+
+    def download_archives(self, archive_name):
+        download_archive_api = consts.DOWNLOAD_ARCHIVE_API % archive_name
+        self.get_resources_info(download_archive_api, None)
+        archive_name_infos = archive_name.split('.')
+        archivedump_api = consts.ARCHIVEDUMP_API % (archive_name, archive_name_infos[0])
+        self.get_resources_info(archivedump_api, None)

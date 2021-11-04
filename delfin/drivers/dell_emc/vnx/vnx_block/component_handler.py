@@ -459,8 +459,8 @@ class ComponentHandler(object):
             print("start_time=={}==end_time==={}".format(start_time, end_time))
             for archive_info in (archives or []):
                 collection_timestamp = tools.time_str_to_timestamp(archive_info.get('collection_time'), consts.TIME_PATTERN)
-                print("collection_time=={}=={}==={}".format(archive_info.get('collection_time'), collection_timestamp, archive_info.get('archive_name')))
-                if collection_timestamp<start_time:
+                # print("collection_time=={}=={}==={}".format(archive_info.get('collection_time'), collection_timestamp, archive_info.get('archive_name')))
+                if collection_timestamp<=start_time:
                     last_file = archive_info.get('archive_name')
                     continue
                 else:
@@ -469,9 +469,13 @@ class ComponentHandler(object):
                         last_file = ''
                     if collection_timestamp<end_time:
                         archive_file_list.append(archive_info.get('archive_name'))
-            print('archive_file_list=={}'.format(archive_file_list))
+            # print('archive_file_list=={}'.format(archive_file_list))
             # 下载并转换性能文件
+            for archive_file in archive_file_list:
+                print(archive_file)
+                self.navi_handler.download_archives(archive_file)
             # 解析性能文件cvs
+                
             # 过滤出需要的性能数据
             # 组装需要输出的数据
             # 删除性能文件

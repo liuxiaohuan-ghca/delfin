@@ -736,10 +736,10 @@ class TestVnxBlocktorageDriver(TestCase):
                 'responseTime'
             ]
         }
-        start_time = 1618096540000 # 1618096539000
-        end_time = 1618115257000  # 1618115258000
+        start_time = 1618096539000 # 1618096539000
+        end_time = 1618115258000  # 1618115258000
         NaviClient.exec = mock.Mock(
-            side_effect=[ARCHIVE_DATAS, DISK_DATAS])
+            side_effect=[ARCHIVE_DATAS, DISK_DATAS, '', '', '', ''])
         metrics = driver.collect_perf_metrics(context, '12345',
                                               resource_metrics, start_time,
                                               end_time)
