@@ -92,8 +92,8 @@ LUN_INFOS = """
         Is Compressed:  No
         """
 GET_ALL_LUN_INFOS = """
-        LOGICAL UNIT NUMBER 186
-        Name                        LN_10G_01
+        LOGICAL UNIT NUMBER 230
+        Name                        LUN_to_Vplex_KLM_test_1
         RAIDGroup ID:               1
         State:                      Bound
         LUN Capacity(Megabytes):    10240
@@ -737,9 +737,9 @@ class TestVnxBlocktorageDriver(TestCase):
             ]
         }
         start_time = 1618096539000 # 1618096539000
-        end_time = 1618115258000  # 1618115258000
+        end_time = 1618096839000  # 1618115258000
         NaviClient.exec = mock.Mock(
-            side_effect=[ARCHIVE_DATAS, DISK_DATAS, '', '', '', ''])
+            side_effect=[ARCHIVE_DATAS, '', '', SP_DATAS, PORT_DATAS, DISK_DATAS, GET_ALL_LUN_INFOS])
         metrics = driver.collect_perf_metrics(context, '12345',
                                               resource_metrics, start_time,
                                               end_time)

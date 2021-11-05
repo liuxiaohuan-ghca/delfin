@@ -151,7 +151,6 @@ class NaviHandler(object):
         # Execute commands to query data and analyze
         try:
             command_str = self.get_cli_command_str(sub_command=sub_command)
-            print('command_str==={}'.format(command_str))
             resource_info = self.navi_exe(command_str.split())
             return_value = None
             if resource_info:

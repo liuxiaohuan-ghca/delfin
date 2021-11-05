@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import re
+import time
 
 import six
 from oslo_log import log
@@ -475,7 +476,52 @@ class ComponentHandler(object):
                 print(archive_file)
                 self.navi_handler.download_archives(archive_file)
             # 解析性能文件cvs
-                
+                # 取得存储中需要性能数据的所有资源对象
+                resources_map = {}
+                controllers = self.navi_handler.get_controllers()
+                for controller in (controllers or []):
+                    resources_map[controller.get('sp_name')] = controller.get('signature_for_the_sp')
+                ports = self.navi_handler.get_ports()
+                for port in (ports or []):
+                    port_id = port.get('sp_port_id')
+                    sp_name = port.get('sp_name').replace('SP ', '')
+                    name = '%s-%s' % (sp_name, port_id)
+                    port_id = 'Port %s [ %s ]' % (port_id, port.get('sp_uid'))
+                    resources_map[port_id] = name
+                disks = self.navi_handler.get_disks()
+                for disk in (disks or []):
+                    disk_name = disk.get('disk_name')
+                    disk_name = disk_name.replace(' Disk', 'Disk')
+                    resources_map[disk_name] = disk.get('disk_id')
+                volumes = self.navi_handler.get_all_lun()
+                for volume in (volumes or []):
+                    # LUN_to_Vplex_KLM_test_1 [230; RAID 5; VPLEX_Gateway]
+                    volume_name = '%s [%s;' % (volume.get('name'), volume.get('logical_unit_number'))
+                    resources_map[volume_name] = str(volume.get('logical_unit_number'))
+                print('resources_map=={}'.format(resources_map))
+                aa_list = []
+                s = time.time()
+
+                aa = 'Port 9 [FC; 50:06:01:60:88:60:24:1E:50:06:01:69:08:64:24:1E ]'
+                aa1 = re.sub('(\[.*;)', '[', aa)
+                print(aa1)
+                aa2 = aa.replace(r"(\[.*;)","[")
+                print(aa2)
+                with open("D:\documents\\20201019异构存储开发--EMC\\20210420-第三方设备接口测试数据\\20210708_____vnx_file78.csv") as file:
+                    for line in file:
+                        lines = line.split(',')
+                        # print(str(len(lines))+'==='+lines[0])
+                        # volume
+                        # hexiande-powerha-lun_1 [233; hexiande-storage-v6]
+                        # LUN_to_Vplex_KLM_test_1 [230; RAID 5; VPLEX_Gateway]
+                        # port
+                        # Pool 1
+                        # Port 9 [FC; 50:06:01:60:88:60:24:1E:50:06:01:69:08:64:24:1E ]
+                        # disk
+                        # Bus 0 Enclosure 0 Disk 1
+                        # aa_list.append(line)
+
+                print('use time=={}'.format(time.time()-s))
             # 过滤出需要的性能数据
             # 组装需要输出的数据
             # 删除性能文件
