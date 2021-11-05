@@ -154,7 +154,8 @@ class NaviHandler(object):
             resource_info = self.navi_exe(command_str.split())
             return_value = None
             if resource_info:
-                return_value = analyse_type(resource_info)
+                if analyse_type:
+                    return_value = analyse_type(resource_info)
         except Exception as e:
             err_msg = "Failed to get resources info from %s: %s" \
                       % (sub_command, six.text_type(e))
@@ -606,3 +607,33 @@ class NaviHandler(object):
             raise e
         finally:
             self.session_lock.release()
+
+    def get_archives(self):
+        return self.get_resources_info(consts.GET_ARCHIVE_API,
+                                       self.cli_archives_to_list)
+
+    def cli_archives_to_list(self, resource_info):
+        obj_list = []
+        try:
+            obj_infos = resource_info.split('\n')
+            for obj_info in obj_infos:
+                str_line = obj_info.strip()
+                if str_line:
+                    archive_infos = str_line.split()
+                    if archive_infos and len(archive_infos)==5:
+                        obj_model = {}
+                        obj_model['collection_time'] = "%s %s" % (archive_infos[2], archive_infos[3])
+                        obj_model['archive_name'] = archive_infos[4]
+                        obj_list.append(obj_model)
+        except Exception as e:
+            err_msg = "arrange archives info error: %s", six.text_type(e)
+            LOG.error(err_msg)
+            raise exception.InvalidResults(err_msg)
+        return obj_list
+
+    def download_archives(self, archive_name):
+        download_archive_api = consts.DOWNLOAD_ARCHIVE_API % archive_name
+        self.get_resources_info(download_archive_api, None)
+        archive_name_infos = archive_name.split('.')
+        archivedump_api = consts.ARCHIVEDUMP_API % (archive_name, archive_name_infos[0])
+        self.get_resources_info(archivedump_api, None)

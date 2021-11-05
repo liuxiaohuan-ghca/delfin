@@ -15,6 +15,7 @@ import sys
 import time
 from unittest import TestCase, mock
 
+from delfin.common import constants
 from delfin.drivers.dell_emc.vnx.vnx_block import consts
 from delfin.drivers.dell_emc.vnx.vnx_block.alert_handler import AlertHandler
 from delfin.drivers.utils.tools import Tools
@@ -91,8 +92,8 @@ LUN_INFOS = """
         Is Compressed:  No
         """
 GET_ALL_LUN_INFOS = """
-        LOGICAL UNIT NUMBER 186
-        Name                        LN_10G_01
+        LOGICAL UNIT NUMBER 230
+        Name                        LUN_to_Vplex_KLM_test_1
         RAIDGroup ID:               1
         State:                      Bound
         LUN Capacity(Megabytes):    10240
@@ -352,6 +353,18 @@ I/O Module Type :  SAS
 SP ID :  B
 I/O Module Slot :  Base Module
 I/O Module Type :  SAS
+"""
+
+ARCHIVE_DATAS = """
+Index Size in KB     Last Modified            Filename
+0     3403      04/11/2021 02:03:38  CETV2135000041_SPA_2021-04-10_18-03-35-GMT_P08-00.nar
+1     3390      04/11/2021 04:39:38  CETV2135000041_SPA_2021-04-10_20-39-36-GMT_P08-00.nar
+2     3388      04/11/2021 07:15:39  CETV2135000041_SPA_2021-04-10_23-15-36-GMT_P08-00.nar
+3     3397      04/11/2021 09:51:46  CETV2135000041_SPA_2021-04-11_01-51-35-GMT_P08-00.nar
+4     3391      04/11/2021 12:27:38  CETV2135000041_SPA_2021-04-11_04-27-35-GMT_P08-00.nar
+5     3380      04/11/2021 15:03:39  CETV2135000041_SPA_2021-04-11_07-03-36-GMT_P08-00.nar
+6     3380      04/11/2021 17:39:39  CETV2135000041_SPA_2021-04-11_09-39-36-GMT_P08-00.nar
+7     3389      04/11/2021 20:15:38  CETV2135000041_SPA_2021-04-11_12-15-35-GMT_P08-00.nar
 """
 
 AGENT_RESULT = {
@@ -696,3 +709,51 @@ class TestVnxBlocktorageDriver(TestCase):
                          BUS_PORT_DATAS, BUS_PORT_STATE_DATAS])
         ports = self.driver.list_ports(context)
         self.assertDictEqual(ports[0], PORT_RESULT[0])
+
+    def test_get_perf_metrics(self):
+        driver = create_driver()
+        resource_metrics = {
+            'controller': [
+                'iops', 'readIops', 'writeIops',
+                'throughput', 'readThroughput', 'writeThroughput',
+                'responseTime'
+            ],
+            'volume': [
+                'iops', 'readIops', 'writeIops',
+                'throughput', 'readThroughput', 'writeThroughput',
+                'responseTime',
+                'cacheHitRatio', 'readCacheHitRatio', 'writeCacheHitRatio',
+                'ioSize', 'readIoSize', 'writeIoSize',
+            ],
+            'port': [
+                'iops', 'readIops', 'writeIops',
+                'throughput', 'readThroughput', 'writeThroughput',
+                'responseTime'
+            ],
+            'disk': [
+                'iops', 'readIops', 'writeIops',
+                'throughput', 'readThroughput', 'writeThroughput',
+                'responseTime'
+            ]
+        }
+        start_time = 1618096539000 # 1618096539000
+        end_time = 1618096839000  # 1618115258000
+        NaviClient.exec = mock.Mock(
+            side_effect=[ARCHIVE_DATAS, '', '', SP_DATAS, PORT_DATAS, DISK_DATAS, GET_ALL_LUN_INFOS])
+        metrics = driver.collect_perf_metrics(context, '12345',
+                                              resource_metrics, start_time,
+                                              end_time)
+        print('test metrics==={}'.format(metrics))
+        # self.assertEqual(metrics[0], METRICS_RESULT[0])
+        # self.assertEqual(metrics[13], METRICS_RESULT[2])
+        # self.assertEqual(metrics[23], METRICS_RESULT[3])
+        # self.assertEqual(metrics[29], METRICS_RESULT[4])
+
+    def test_get_capabilities(self):
+        driver = create_driver()
+        cap = driver.get_capabilities(context)
+        self.assertIsNotNone(cap.get('resource_metrics'))
+        self.assertIsNotNone(cap.get('resource_metrics').get('storagePool'))
+        self.assertIsNotNone(cap.get('resource_metrics').get('volume'))
+        self.assertIsNotNone(cap.get('resource_metrics').get('port'))
+        self.assertIsNotNone(cap.get('resource_metrics').get('disk'))
