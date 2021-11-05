@@ -523,12 +523,19 @@ class ComponentHandler(object):
                             resource_obj_name = re.sub('(; .*])', ']', resource_obj_name)
                             # print('volume resource_obj_name=={}'.format(resource_obj_name))
                         # print('aaa resource_obj_name=={}'.format(resource_obj_name))
+                        # 过滤出需要的性能数据
                         if resource_obj_name in resources_map.keys():
-                            print('{}==={}'.format(resource_obj_name, line))
+                            # print('{}==={}'.format(resource_obj_name, line))
+                            # 判断时间范围
+                            obj_collection_timestamp = tools.time_str_to_timestamp(lines[1], consts.TIME_PATTERN)
+                            # print('{}=={}=={}'.format(resource_obj_name, obj_collection_timestamp, lines))
+                            if start_time<=obj_collection_timestamp and obj_collection_timestamp<=end_time:
+                                print('{}=={}=={}'.format(resource_obj_name, obj_collection_timestamp, lines))
+
                         # aa_list.append(line)
 
                 print('use time=={}'.format(time.time()-s))
-            # 过滤出需要的性能数据
+
             # 组装需要输出的数据
             # 删除性能文件
             print()
