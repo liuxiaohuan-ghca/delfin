@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import copy
 import re
 import time
 
@@ -450,10 +451,14 @@ class ComponentHandler(object):
                              start_time, end_time):
         metrics = []
         try:
+            s = time.time()
             # 查询性能文件列表
             archives = self.navi_handler.get_archives()
-            print('archives==={}'.format(archives))
+            # print('archives==={}'.format(archives))
             # 通过时间参数过滤出需要的性能文件
+            resources_map = {}
+            resources_type_map = {}
+            performance_lines_map = {}
             archive_file_list = []
             last_file = ''
             tools = Tools()
@@ -465,22 +470,18 @@ class ComponentHandler(object):
                     last_file = archive_info.get('archive_name')
                     continue
                 else:
-                    if last_file:
-                        archive_file_list.append(last_file)
-                        last_file = ''
                     if collection_timestamp<end_time:
                         archive_file_list.append(archive_info.get('archive_name'))
-            # print('archive_file_list=={}'.format(archive_file_list))
-            # 下载并转换性能文件
-            for archive_file in archive_file_list:
-                print(archive_file)
-                self.navi_handler.download_archives(archive_file)
-            # 解析性能文件cvs
+            if last_file:
+                archive_file_list.insert(0, last_file)
+            print('archive_file_list=={}'.format(archive_file_list))
+            if archive_file_list:
                 # 取得存储中需要性能数据的所有资源对象
-                resources_map = {}
                 controllers = self.navi_handler.get_controllers()
                 for controller in (controllers or []):
-                    resources_map[controller.get('sp_name')] = controller.get('signature_for_the_sp')
+                    resources_map[controller.get('sp_name')] = controller.get(
+                        'signature_for_the_sp')
+                    resources_type_map[controller.get('sp_name')] = constants.ResourceType.CONTROLLER
                 ports = self.navi_handler.get_ports()
                 for port in (ports or []):
                     port_id = port.get('sp_port_id')
@@ -488,44 +489,83 @@ class ComponentHandler(object):
                     name = '%s-%s' % (sp_name, port_id)
                     port_id = 'Port %s [ %s ]' % (port_id, port.get('sp_uid'))
                     resources_map[port_id] = name
+                    resources_type_map[port_id] = constants.ResourceType.PORT
                 disks = self.navi_handler.get_disks()
                 for disk in (disks or []):
                     disk_name = disk.get('disk_name')
                     disk_name = disk_name.replace(' Disk', 'Disk')
                     resources_map[disk_name] = disk.get('disk_id')
+                    resources_type_map[disk_name] = constants.ResourceType.DISK
                 volumes = self.navi_handler.get_all_lun()
                 for volume in (volumes or []):
                     # LUN_to_Vplex_KLM_test_1 [230; RAID 5; VPLEX_Gateway]
-                    volume_name = '%s [%s;' % (volume.get('name'), volume.get('logical_unit_number'))
+                    volume_name = '%s [%s]' % (
+                    volume.get('name'), volume.get('logical_unit_number'))
                     resources_map[volume_name] = str(volume.get('logical_unit_number'))
-                print('resources_map=={}'.format(resources_map))
-                aa_list = []
-                s = time.time()
-
-                aa = 'Port 9 [FC; 50:06:01:60:88:60:24:1E:50:06:01:69:08:64:24:1E ]'
-                aa1 = re.sub('(\[.*;)', '[', aa)
-                print(aa1)
-                aa2 = aa.replace(r"(\[.*;)","[")
-                print(aa2)
+                    resources_type_map[volume_name] = constants.ResourceType.VOLUME
+                # print('resources_map=={}'.format(resources_map))
+            # 下载并转换性能文件
+            for archive_file in archive_file_list:
+                # print(archive_file)
+                self.navi_handler.download_archives(archive_file)
+                # 解析性能文件cvs
+                # aa = 'Port 9 [FC; 50:06:01:60:88:60:24:1E:50:06:01:69:08:64:24:1E ]'
+                # aa1 = re.sub('(\[.*;)', '[', aa)
+                # print(aa1)
                 with open("D:\documents\\20201019异构存储开发--EMC\\20210420-第三方设备接口测试数据\\20210708_____vnx_file78.csv") as file:
                     for line in file:
                         lines = line.split(',')
                         # print(str(len(lines))+'==='+lines[0])
-                        # volume
-                        # hexiande-powerha-lun_1 [233; hexiande-storage-v6]
-                        # LUN_to_Vplex_KLM_test_1 [230; RAID 5; VPLEX_Gateway]
                         # port
                         # Pool 1
                         # Port 9 [FC; 50:06:01:60:88:60:24:1E:50:06:01:69:08:64:24:1E ]
-                        # disk
-                        # Bus 0 Enclosure 0 Disk 1
+                        resource_obj_name = lines[0]
+                        if 'Port ' in resource_obj_name:
+                            resource_obj_name = re.sub('(\[.*;)', '[', resource_obj_name)
+                            # print('port resource_obj_name=={}'.format(resource_obj_name))
+                        # volume
+                        # hexiande-powerha-lun_1 [233; hexiande-storage-v6]
+                        # LUN_to_Vplex_KLM_test_1 [230; RAID 5; VPLEX_Gateway]
+                        elif '; ' in resource_obj_name:
+                            resource_obj_name = re.sub('(; .*])', ']', resource_obj_name)
+                            # print('volume resource_obj_name=={}'.format(resource_obj_name))
+                        # print('aaa resource_obj_name=={}'.format(resource_obj_name))
+                        # 过滤出需要的性能数据
+                        if resource_obj_name in resources_map.keys():
+                            # print('{}==={}'.format(resource_obj_name, line))
+                            # 判断时间范围
+                            obj_collection_timestamp = tools.time_str_to_timestamp(lines[1], consts.TIME_PATTERN)
+                            # print('{}=={}=={}'.format(resource_obj_name, obj_collection_timestamp, lines))
+                            if start_time<=obj_collection_timestamp and obj_collection_timestamp<=end_time:
+                                # print('{}=={}=={}'.format(resource_obj_name, obj_collection_timestamp, lines))
+                                if performance_lines_map.get(resource_obj_name):
+                                    performance_lines_map.get(resource_obj_name).append(line)
+                                else:
+                                    obj_performance_list = []
+                                    obj_performance_list.append(line)
+                                    performance_lines_map[resource_obj_name] = obj_performance_list
                         # aa_list.append(line)
-
-                print('use time=={}'.format(time.time()-s))
-            # 过滤出需要的性能数据
+            # print('performance_lines_map=={}'.format(performance_lines_map))
             # 组装需要输出的数据
+            if resources_type_map:
+                # print(resources_type_map)
+                for resource_obj in resources_type_map.keys():
+                    resources_type = resources_type_map.get(resource_obj)
+                    labels = {
+                        'storage_id': storage_id,
+                        'resource_type': resources_type,
+                        'resource_id': resources_map.get(resource_obj),
+                        'type': 'RAW',
+                        'unit': ''
+                    }
+                    metric_model_list = self._get_metric_model(resource_metrics.get(resources_type),
+                                                               labels,
+                                                               performance_lines_map.get(resource_obj),
+                                                               consts.RESOURCES_TYPE_TO_METRIC_CAP.get(resources_type), resources_type)
+                    if metric_model_list:
+                        metrics.extend(metric_model_list)
             # 删除性能文件
-            print()
+            print('use time=={}'.format(time.time()-s))
         except exception.DelfinException as err:
             err_msg = "Failed to collect metrics from VnxBlockStor: %s" % \
                       (six.text_type(err))
@@ -537,3 +577,27 @@ class ComponentHandler(object):
             LOG.error(err_msg)
             raise exception.InvalidResults(err_msg)
         return metrics
+
+    def _get_metric_model(self, metric_list, labels, metric_values, obj_cap, resources_type):
+        metric_model_list = []
+        tools = Tools()
+        for metric_name in (metric_list or []):
+            values = {}
+            obj_labels = copy.deepcopy(labels)
+            obj_labels['unit'] = obj_cap.get(metric_name).get('unit')
+            for metric_value in metric_values:
+                value = None
+                metric_value_infos = metric_value.split(',')
+                if consts.METRIC_MAP.get(resources_type) and consts.METRIC_MAP.get(resources_type).get(metric_name):
+                    value = metric_value_infos[consts.METRIC_MAP.get(resources_type).get(metric_name)]
+                    # print('{}=={}=={}=={}'.format(resources_type,metric_name,consts.METRIC_MAP.get(resources_type).get(metric_name),value))
+                    if value is not None:
+                        collection_timestamp = tools.time_str_to_timestamp(
+                            metric_value_infos[1], consts.TIME_PATTERN)
+                        values[collection_timestamp] = value
+            if values:
+                metric_model = constants.metric_struct(name=metric_name,
+                                                       labels=obj_labels,
+                                                       values=values)
+                metric_model_list.append(metric_model)
+        return metric_model_list
