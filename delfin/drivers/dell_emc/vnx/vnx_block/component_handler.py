@@ -454,7 +454,7 @@ class ComponentHandler(object):
             s = time.time()
             # 查询性能文件列表
             archives = self.navi_handler.get_archives()
-            print('archives==={}'.format(archives))
+            # print('archives==={}'.format(archives))
             # 通过时间参数过滤出需要的性能文件
             resources_map = {}
             resources_type_map = {}
@@ -470,11 +470,10 @@ class ComponentHandler(object):
                     last_file = archive_info.get('archive_name')
                     continue
                 else:
-                    if last_file:
-                        archive_file_list.append(last_file)
-                        last_file = ''
                     if collection_timestamp<end_time:
                         archive_file_list.append(archive_info.get('archive_name'))
+            if last_file:
+                archive_file_list.insert(0, last_file)
             print('archive_file_list=={}'.format(archive_file_list))
             if archive_file_list:
                 # 取得存储中需要性能数据的所有资源对象
@@ -504,10 +503,10 @@ class ComponentHandler(object):
                     volume.get('name'), volume.get('logical_unit_number'))
                     resources_map[volume_name] = str(volume.get('logical_unit_number'))
                     resources_type_map[volume_name] = constants.ResourceType.VOLUME
-                print('resources_map=={}'.format(resources_map))
+                # print('resources_map=={}'.format(resources_map))
             # 下载并转换性能文件
             for archive_file in archive_file_list:
-                print(archive_file)
+                # print(archive_file)
                 self.navi_handler.download_archives(archive_file)
                 # 解析性能文件cvs
                 # aa = 'Port 9 [FC; 50:06:01:60:88:60:24:1E:50:06:01:69:08:64:24:1E ]'
@@ -546,10 +545,10 @@ class ComponentHandler(object):
                                     obj_performance_list.append(line)
                                     performance_lines_map[resource_obj_name] = obj_performance_list
                         # aa_list.append(line)
-            print('performance_lines_map=={}'.format(performance_lines_map))
+            # print('performance_lines_map=={}'.format(performance_lines_map))
             # 组装需要输出的数据
             if resources_type_map:
-                print(resources_type_map)
+                # print(resources_type_map)
                 for resource_obj in resources_type_map.keys():
                     resources_type = resources_type_map.get(resource_obj)
                     labels = {
