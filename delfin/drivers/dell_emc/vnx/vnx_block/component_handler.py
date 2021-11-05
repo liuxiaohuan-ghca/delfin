@@ -559,10 +559,12 @@ class ComponentHandler(object):
                         'type': 'RAW',
                         'unit': ''
                     }
-                    metrics = self._get_metric_model(resource_metrics.get(resources_type),
+                    metric_model_list = self._get_metric_model(resource_metrics.get(resources_type),
                                                                labels,
                                                                performance_lines_map.get(resource_obj),
-                                                               consts.RESOURCES_TYPE_TO_METRIC_CAP.get(resources_type))
+                                                               consts.RESOURCES_TYPE_TO_METRIC_CAP.get(resources_type), resources_type)
+                    if metric_model_list:
+                        metrics.extend(metric_model_list)
             # 删除性能文件
             print('use time=={}'.format(time.time()-s))
         except exception.DelfinException as err:
@@ -577,7 +579,7 @@ class ComponentHandler(object):
             raise exception.InvalidResults(err_msg)
         return metrics
 
-    def _get_metric_model(self, metric_list, labels, metric_values, obj_cap):
+    def _get_metric_model(self, metric_list, labels, metric_values, obj_cap, resources_type):
         metric_model_list = []
         tools = Tools()
         for metric_name in (metric_list or []):
@@ -585,10 +587,15 @@ class ComponentHandler(object):
             obj_labels = copy.deepcopy(labels)
             obj_labels['unit'] = obj_cap.get(metric_name).get('unit')
             for metric_value in metric_values:
+                value = None
                 metric_value_infos = metric_value.split(',')
-                if metric_value_infos[9] is not None:
-                    collection_timestamp = tools.time_str_to_timestamp(metric_value_infos[1], consts.TIME_PATTERN)
-                    values[collection_timestamp] = metric_value_infos[9]
+                if consts.METRIC_MAP.get(resources_type) and consts.METRIC_MAP.get(resources_type).get(metric_name):
+                    value = metric_value_infos[consts.METRIC_MAP.get(resources_type).get(metric_name)]
+                    # print('{}=={}=={}=={}'.format(resources_type,metric_name,consts.METRIC_MAP.get(resources_type).get(metric_name),value))
+                    if value is not None:
+                        collection_timestamp = tools.time_str_to_timestamp(
+                            metric_value_infos[1], consts.TIME_PATTERN)
+                        values[collection_timestamp] = value
             if values:
                 metric_model = constants.metric_struct(name=metric_name,
                                                        labels=obj_labels,

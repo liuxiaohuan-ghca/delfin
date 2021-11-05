@@ -248,6 +248,17 @@ RESOURCES_TYPE_TO_METRIC_CAP = {
     constants.ResourceType.DISK: DISK_CAP,
     constants.ResourceType.VOLUME: VOLUME_CAP,
 }
+METRIC_MAP = {
+    constants.ResourceType.CONTROLLER: {
+        "iops": 16,
+        "readIops": 25,
+        "writeIops": 34,
+        "throughput": 13,
+        "readThroughput": 19,
+        "writeThroughput": 28,
+        "responseTime": 10
+    }
+}
 GET_ARCHIVE_API = 'analyzer -archive -list'
 DOWNLOAD_ARCHIVE_API = 'analyzer -archiveretrieve -file %s -location D:\ -overwrite y -retry 3'
 ARCHIVEDUMP_API = 'analyzer -archivedump –data %s –out %s.csv'
