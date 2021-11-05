@@ -450,10 +450,13 @@ class ComponentHandler(object):
                              start_time, end_time):
         metrics = []
         try:
+            s = time.time()
             # 查询性能文件列表
             archives = self.navi_handler.get_archives()
             print('archives==={}'.format(archives))
             # 通过时间参数过滤出需要的性能文件
+            resources_map = {}
+            performance_lines_map = {}
             archive_file_list = []
             last_file = ''
             tools = Tools()
@@ -470,17 +473,13 @@ class ComponentHandler(object):
                         last_file = ''
                     if collection_timestamp<end_time:
                         archive_file_list.append(archive_info.get('archive_name'))
-            # print('archive_file_list=={}'.format(archive_file_list))
-            # 下载并转换性能文件
-            for archive_file in archive_file_list:
-                print(archive_file)
-                self.navi_handler.download_archives(archive_file)
-            # 解析性能文件cvs
+            print('archive_file_list=={}'.format(archive_file_list))
+            if archive_file_list:
                 # 取得存储中需要性能数据的所有资源对象
-                resources_map = {}
                 controllers = self.navi_handler.get_controllers()
                 for controller in (controllers or []):
-                    resources_map[controller.get('sp_name')] = controller.get('signature_for_the_sp')
+                    resources_map[controller.get('sp_name')] = controller.get(
+                        'signature_for_the_sp')
                 ports = self.navi_handler.get_ports()
                 for port in (ports or []):
                     port_id = port.get('sp_port_id')
@@ -496,12 +495,16 @@ class ComponentHandler(object):
                 volumes = self.navi_handler.get_all_lun()
                 for volume in (volumes or []):
                     # LUN_to_Vplex_KLM_test_1 [230; RAID 5; VPLEX_Gateway]
-                    volume_name = '%s [%s]' % (volume.get('name'), volume.get('logical_unit_number'))
-                    resources_map[volume_name] = str(volume.get('logical_unit_number'))
+                    volume_name = '%s [%s]' % (
+                    volume.get('name'), volume.get('logical_unit_number'))
+                    resources_map[volume_name] = str(
+                        volume.get('logical_unit_number'))
                 print('resources_map=={}'.format(resources_map))
-                aa_list = []
-                s = time.time()
-
+            # 下载并转换性能文件
+            for archive_file in archive_file_list:
+                print(archive_file)
+                self.navi_handler.download_archives(archive_file)
+                # 解析性能文件cvs
                 # aa = 'Port 9 [FC; 50:06:01:60:88:60:24:1E:50:06:01:69:08:64:24:1E ]'
                 # aa1 = re.sub('(\[.*;)', '[', aa)
                 # print(aa1)
@@ -530,11 +533,16 @@ class ComponentHandler(object):
                             obj_collection_timestamp = tools.time_str_to_timestamp(lines[1], consts.TIME_PATTERN)
                             # print('{}=={}=={}'.format(resource_obj_name, obj_collection_timestamp, lines))
                             if start_time<=obj_collection_timestamp and obj_collection_timestamp<=end_time:
-                                print('{}=={}=={}'.format(resource_obj_name, obj_collection_timestamp, lines))
-
+                                # print('{}=={}=={}'.format(resource_obj_name, obj_collection_timestamp, lines))
+                                if performance_lines_map.get(resource_obj_name):
+                                    performance_lines_map.get(resource_obj_name).append(line)
+                                else:
+                                    obj_performance_list = []
+                                    obj_performance_list.append(line)
+                                    performance_lines_map[resource_obj_name] = obj_performance_list
                         # aa_list.append(line)
-
-                print('use time=={}'.format(time.time()-s))
+            print('performance_lines_map=={}'.format(performance_lines_map))
+            print('use time=={}'.format(time.time()-s))
 
             # 组装需要输出的数据
             # 删除性能文件
