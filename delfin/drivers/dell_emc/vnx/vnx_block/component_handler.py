@@ -496,29 +496,35 @@ class ComponentHandler(object):
                 volumes = self.navi_handler.get_all_lun()
                 for volume in (volumes or []):
                     # LUN_to_Vplex_KLM_test_1 [230; RAID 5; VPLEX_Gateway]
-                    volume_name = '%s [%s;' % (volume.get('name'), volume.get('logical_unit_number'))
+                    volume_name = '%s [%s]' % (volume.get('name'), volume.get('logical_unit_number'))
                     resources_map[volume_name] = str(volume.get('logical_unit_number'))
                 print('resources_map=={}'.format(resources_map))
                 aa_list = []
                 s = time.time()
 
-                aa = 'Port 9 [FC; 50:06:01:60:88:60:24:1E:50:06:01:69:08:64:24:1E ]'
-                aa1 = re.sub('(\[.*;)', '[', aa)
-                print(aa1)
-                aa2 = aa.replace(r"(\[.*;)","[")
-                print(aa2)
+                # aa = 'Port 9 [FC; 50:06:01:60:88:60:24:1E:50:06:01:69:08:64:24:1E ]'
+                # aa1 = re.sub('(\[.*;)', '[', aa)
+                # print(aa1)
                 with open("D:\documents\\20201019异构存储开发--EMC\\20210420-第三方设备接口测试数据\\20210708_____vnx_file78.csv") as file:
                     for line in file:
                         lines = line.split(',')
                         # print(str(len(lines))+'==='+lines[0])
-                        # volume
-                        # hexiande-powerha-lun_1 [233; hexiande-storage-v6]
-                        # LUN_to_Vplex_KLM_test_1 [230; RAID 5; VPLEX_Gateway]
                         # port
                         # Pool 1
                         # Port 9 [FC; 50:06:01:60:88:60:24:1E:50:06:01:69:08:64:24:1E ]
-                        # disk
-                        # Bus 0 Enclosure 0 Disk 1
+                        resource_obj_name = lines[0]
+                        if 'Port ' in resource_obj_name:
+                            resource_obj_name = re.sub('(\[.*;)', '[', resource_obj_name)
+                            # print('port resource_obj_name=={}'.format(resource_obj_name))
+                        # volume
+                        # hexiande-powerha-lun_1 [233; hexiande-storage-v6]
+                        # LUN_to_Vplex_KLM_test_1 [230; RAID 5; VPLEX_Gateway]
+                        elif '; ' in resource_obj_name:
+                            resource_obj_name = re.sub('(; .*])', ']', resource_obj_name)
+                            # print('volume resource_obj_name=={}'.format(resource_obj_name))
+                        # print('aaa resource_obj_name=={}'.format(resource_obj_name))
+                        if resource_obj_name in resources_map.keys():
+                            print('{}==={}'.format(resource_obj_name, line))
                         # aa_list.append(line)
 
                 print('use time=={}'.format(time.time()-s))
