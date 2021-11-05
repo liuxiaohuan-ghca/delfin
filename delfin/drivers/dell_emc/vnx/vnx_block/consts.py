@@ -257,6 +257,36 @@ METRIC_MAP = {
         "readThroughput": 19,
         "writeThroughput": 28,
         "responseTime": 10
+    },
+    constants.ResourceType.PORT: {
+        "iops": 16,
+        "readIops": 25,
+        "writeIops": 34,
+        "throughput": 13,
+        "readThroughput": 19,
+        "writeThroughput": 28
+    },
+    constants.ResourceType.DISK: {
+        "iops": 16,
+        "readIops": 25,
+        "writeIops": 34,
+        "throughput": 13,
+        "readThroughput": 19,
+        "writeThroughput": 28,
+        "responseTime": 10
+    },
+    constants.ResourceType.VOLUME: {
+        "iops": 16,
+        "readIops": 25,
+        "writeIops": 34,
+        "throughput": 13,
+        "readThroughput": 19,
+        "writeThroughput": 28,
+        "responseTime": 10,
+        "readCacheHitRatio": 39,
+        "writeCacheHitRatio": 42,
+        "readIoSize": 22,
+        "writeIoSize": 31
     }
 }
 GET_ARCHIVE_API = 'analyzer -archive -list'
