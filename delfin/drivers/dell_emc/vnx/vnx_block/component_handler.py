@@ -542,11 +542,9 @@ class ComponentHandler(object):
                                     performance_lines_map[resource_obj_name] = obj_performance_list
                         # aa_list.append(line)
             print('performance_lines_map=={}'.format(performance_lines_map))
-            print('use time=={}'.format(time.time()-s))
-
             # 组装需要输出的数据
             # 删除性能文件
-            print()
+            print('use time=={}'.format(time.time()-s))
         except exception.DelfinException as err:
             err_msg = "Failed to collect metrics from VnxBlockStor: %s" % \
                       (six.text_type(err))
