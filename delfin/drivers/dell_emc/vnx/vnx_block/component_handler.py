@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import copy
 import re
 import time
 
@@ -456,6 +457,7 @@ class ComponentHandler(object):
             print('archives==={}'.format(archives))
             # 通过时间参数过滤出需要的性能文件
             resources_map = {}
+            resources_type_map = {}
             performance_lines_map = {}
             archive_file_list = []
             last_file = ''
@@ -480,6 +482,7 @@ class ComponentHandler(object):
                 for controller in (controllers or []):
                     resources_map[controller.get('sp_name')] = controller.get(
                         'signature_for_the_sp')
+                    resources_type_map[controller.get('sp_name')] = constants.ResourceType.CONTROLLER
                 ports = self.navi_handler.get_ports()
                 for port in (ports or []):
                     port_id = port.get('sp_port_id')
@@ -487,18 +490,20 @@ class ComponentHandler(object):
                     name = '%s-%s' % (sp_name, port_id)
                     port_id = 'Port %s [ %s ]' % (port_id, port.get('sp_uid'))
                     resources_map[port_id] = name
+                    resources_type_map[port_id] = constants.ResourceType.PORT
                 disks = self.navi_handler.get_disks()
                 for disk in (disks or []):
                     disk_name = disk.get('disk_name')
                     disk_name = disk_name.replace(' Disk', 'Disk')
                     resources_map[disk_name] = disk.get('disk_id')
+                    resources_type_map[disk_name] = constants.ResourceType.DISK
                 volumes = self.navi_handler.get_all_lun()
                 for volume in (volumes or []):
                     # LUN_to_Vplex_KLM_test_1 [230; RAID 5; VPLEX_Gateway]
                     volume_name = '%s [%s]' % (
                     volume.get('name'), volume.get('logical_unit_number'))
-                    resources_map[volume_name] = str(
-                        volume.get('logical_unit_number'))
+                    resources_map[volume_name] = str(volume.get('logical_unit_number'))
+                    resources_type_map[volume_name] = constants.ResourceType.VOLUME
                 print('resources_map=={}'.format(resources_map))
             # 下载并转换性能文件
             for archive_file in archive_file_list:
@@ -543,6 +548,21 @@ class ComponentHandler(object):
                         # aa_list.append(line)
             print('performance_lines_map=={}'.format(performance_lines_map))
             # 组装需要输出的数据
+            if resources_type_map:
+                print(resources_type_map)
+                for resource_obj in resources_type_map.keys():
+                    resources_type = resources_type_map.get(resource_obj)
+                    labels = {
+                        'storage_id': storage_id,
+                        'resource_type': resources_type,
+                        'resource_id': resources_map.get(resource_obj),
+                        'type': 'RAW',
+                        'unit': ''
+                    }
+                    metrics = self._get_metric_model(resource_metrics.get(resources_type),
+                                                               labels,
+                                                               performance_lines_map.get(resource_obj),
+                                                               consts.RESOURCES_TYPE_TO_METRIC_CAP.get(resources_type))
             # 删除性能文件
             print('use time=={}'.format(time.time()-s))
         except exception.DelfinException as err:
@@ -556,3 +576,22 @@ class ComponentHandler(object):
             LOG.error(err_msg)
             raise exception.InvalidResults(err_msg)
         return metrics
+
+    def _get_metric_model(self, metric_list, labels, metric_values, obj_cap):
+        metric_model_list = []
+        tools = Tools()
+        for metric_name in (metric_list or []):
+            values = {}
+            obj_labels = copy.deepcopy(labels)
+            obj_labels['unit'] = obj_cap.get(metric_name).get('unit')
+            for metric_value in metric_values:
+                metric_value_infos = metric_value.split(',')
+                if metric_value_infos[9] is not None:
+                    collection_timestamp = tools.time_str_to_timestamp(metric_value_infos[1], consts.TIME_PATTERN)
+                    values[collection_timestamp] = metric_value_infos[9]
+            if values:
+                metric_model = constants.metric_struct(name=metric_name,
+                                                       labels=obj_labels,
+                                                       values=values)
+                metric_model_list.append(metric_model)
+        return metric_model_list

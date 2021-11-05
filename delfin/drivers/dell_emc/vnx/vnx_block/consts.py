@@ -242,6 +242,12 @@ DISK_CAP = {
     "writeThroughput": WRITE_THROUGHPUT_DESCRIPTION,
     "responseTime": RESPONSE_TIME_DESCRIPTION
 }
+RESOURCES_TYPE_TO_METRIC_CAP = {
+    constants.ResourceType.CONTROLLER: CONTROLLER_CAP,
+    constants.ResourceType.PORT: PORT_CAP,
+    constants.ResourceType.DISK: DISK_CAP,
+    constants.ResourceType.VOLUME: VOLUME_CAP,
+}
 GET_ARCHIVE_API = 'analyzer -archive -list'
 DOWNLOAD_ARCHIVE_API = 'analyzer -archiveretrieve -file %s -location D:\ -overwrite y -retry 3'
 ARCHIVEDUMP_API = 'analyzer -archivedump –data %s –out %s.csv'
