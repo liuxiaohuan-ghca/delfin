@@ -464,8 +464,9 @@ class ComponentHandler(object):
             # print('resources_map=={}'.format(resources_map))
             # 下载并转换性能文件
             performance_lines_map = self._filter_performance_data(archive_file_list, resources_map, start_time, end_time)
+            print('performance_lines_map=={}'.format(performance_lines_map))
             # 组装需要输出的数据
-            if resources_type_map:
+            if resources_type_map and performance_lines_map:
                 # print(resources_type_map)
                 for resource_obj in resources_type_map.keys():
                     resources_type = resources_type_map.get(resource_obj)
