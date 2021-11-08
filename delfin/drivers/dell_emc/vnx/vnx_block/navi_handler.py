@@ -154,8 +154,7 @@ class NaviHandler(object):
             resource_info = self.navi_exe(command_str.split())
             return_value = None
             if resource_info:
-                if analyse_type:
-                    return_value = analyse_type(resource_info)
+                return_value = analyse_type(resource_info)
         except Exception as e:
             err_msg = "Failed to get resources info from %s: %s" \
                       % (sub_command, six.text_type(e))

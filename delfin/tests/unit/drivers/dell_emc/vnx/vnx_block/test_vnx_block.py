@@ -418,8 +418,8 @@ RAID_RESULT = [
     }]
 ALL_LUN_RESULT = [
     {
-        'logical_unit_number': '186',
-        'name': 'LN_10G_01',
+        'logical_unit_number': '230',
+        'name': 'LUN_to_Vplex_KLM_test_1',
         'raidgroup_id': '1',
         'state': 'Bound',
         'lun_capacitymegabytes': '10240',
