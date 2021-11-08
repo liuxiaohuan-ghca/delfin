@@ -533,6 +533,61 @@ PORT_RESULT = [
         'ipv6_mask': None
     }]
 
+METRICS_RESULT = [
+    constants.metric_struct(name='iops', labels={
+        'storage_id': '12345',
+        'resource_type': 'controller',
+        'resource_id': '3600485',
+        'type': 'RAW',
+        'unit': 'IOPS'
+    }, values={
+        1625717756000: '0.000000',
+        1625717816000: '0.000000',
+        1625717875000: '0.000000',
+        1625717936000: '0.032873',
+        1625717996000: '0.000000'
+    }),
+    constants.metric_struct(name='iops', labels={
+        'storage_id': '12345',
+        'resource_type': 'port',
+        'resource_id': 'A-6',
+        'type': 'RAW',
+        'unit': 'IOPS'
+    }, values={
+        1625717756000: '0.000000',
+        1625717816000: '0.000000',
+        1625717875000: '0.000000',
+        1625717936000: '0.000000',
+        1625717996000: '0.000000'
+    }),
+    constants.metric_struct(name='iops', labels={
+        'storage_id': '12345',
+        'resource_type': 'disk',
+        'resource_id': 'Bus0Enclosure0Disk0',
+        'type': 'RAW',
+        'unit': 'IOPS'
+    }, values={
+        1625717756000: '2.153189',
+        1625717816000: '2.366864',
+        1625717875000: '3.583169',
+        1625717936000: '2.366864',
+        1625717996000: '2.449047'
+    }),
+    constants.metric_struct(name='iops', labels={
+        'storage_id': '12345',
+        'resource_type': 'volume',
+        'resource_id': '230',
+        'type': 'RAW',
+        'unit': 'IOPS'
+    }, values={
+        1625717756000: '0.000000',
+        1625717816000: '0.000000',
+        1625717875000: '0.000000',
+        1625717936000: '0.000000',
+        1625717996000: '0.000000'
+    })
+]
+
 
 def create_driver():
     NaviHandler.login = mock.Mock(return_value={"05.33.000.5.038_test"})
@@ -735,18 +790,19 @@ class TestVnxBlocktorageDriver(TestCase):
                 'responseTime'
             ]
         }
-        start_time = 1625717756000 # 1618096539000  1625717756000
+        start_time = 1625717756000  # 1618096539000  1625717756000
         end_time = 1625717996000  # 1618115258000  1625717996000
         NaviClient.exec = mock.Mock(
-            side_effect=[ARCHIVE_DATAS, SP_DATAS, PORT_DATAS, DISK_DATAS, GET_ALL_LUN_INFOS, '', ''])
+            side_effect=[ARCHIVE_DATAS, SP_DATAS, PORT_DATAS, DISK_DATAS,
+                         GET_ALL_LUN_INFOS, '', ''])
         metrics = driver.collect_perf_metrics(context, '12345',
                                               resource_metrics, start_time,
                                               end_time)
         print('test metrics==={}'.format(metrics))
-        # self.assertEqual(metrics[0], METRICS_RESULT[0])
-        # self.assertEqual(metrics[13], METRICS_RESULT[2])
-        # self.assertEqual(metrics[23], METRICS_RESULT[3])
-        # self.assertEqual(metrics[29], METRICS_RESULT[4])
+        self.assertEqual(metrics[0], METRICS_RESULT[0])
+        self.assertEqual(metrics[14], METRICS_RESULT[1])
+        self.assertEqual(metrics[20], METRICS_RESULT[2])
+        self.assertEqual(metrics[27], METRICS_RESULT[3])
 
     def test_get_capabilities(self):
         driver = create_driver()
