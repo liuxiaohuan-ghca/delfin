@@ -14,7 +14,6 @@
 import copy
 import os
 import re
-import time
 
 import six
 from oslo_log import log
@@ -53,7 +52,7 @@ class ComponentHandler(object):
                 'free_capacity': pool_capacity.get('free_capacity')
             }
         else:
-            err_msg = "domain or agent error: %s, %s" %\
+            err_msg = "domain or agent error: %s, %s" % \
                       (six.text_type(domain), six.text_type(agent))
             LOG.error(err_msg)
             raise exception.StorageBackendException(err_msg)
@@ -452,22 +451,14 @@ class ComponentHandler(object):
                              start_time, end_time):
         metrics = []
         try:
-            s = time.time()
             resources_map = {}
             resources_type_map = {}
-            print("start_time=={}==end_time==={}".format(start_time, end_time))
-            # 查询性能文件列表 通过时间参数过滤出需要的性能文件
             archive_file_list = self._get__archive_file(start_time, end_time)
-            print('archive_file_list=={}'.format(archive_file_list))
             if archive_file_list:
                 self._get_resources_map(resources_map, resources_type_map)
-            # print('resources_map=={}'.format(resources_map))
-            # 下载并转换性能文件
-            performance_lines_map = self._filter_performance_data(archive_file_list, resources_map, start_time, end_time)
-            print('performance_lines_map=={}'.format(performance_lines_map))
-            # 组装需要输出的数据
+            performance_lines_map = self._filter_performance_data(
+                archive_file_list, resources_map, start_time, end_time)
             if resources_type_map and performance_lines_map:
-                # print(resources_type_map)
                 for resource_obj in resources_type_map.keys():
                     resources_type = resources_type_map.get(resource_obj)
                     labels = {
@@ -477,15 +468,15 @@ class ComponentHandler(object):
                         'type': 'RAW',
                         'unit': ''
                     }
-                    metric_model_list = self._get_metric_model(resource_metrics.get(resources_type),
-                                                               labels,
-                                                               performance_lines_map.get(resource_obj),
-                                                               consts.RESOURCES_TYPE_TO_METRIC_CAP.get(resources_type), resources_type)
+                    metric_model_list = self._get_metric_model(
+                        resource_metrics.get(resources_type),
+                        labels,
+                        performance_lines_map.get(resource_obj),
+                        consts.RESOURCES_TYPE_TO_METRIC_CAP.get(
+                            resources_type), resources_type)
                     if metric_model_list:
                         metrics.extend(metric_model_list)
-            # 删除性能文件
             self._remove_archive_file(archive_file_list)
-            print('use time=={}'.format(time.time()-s))
         except exception.DelfinException as err:
             err_msg = "Failed to collect metrics from VnxBlockStor: %s" % \
                       (six.text_type(err))
@@ -506,7 +497,6 @@ class ComponentHandler(object):
         for archive_info in (archives or []):
             collection_timestamp = tools.time_str_to_timestamp(
                 archive_info.get('collection_time'), consts.TIME_PATTERN)
-            # print("collection_time=={}=={}==={}".format(archive_info.get('collection_time'), collection_timestamp, archive_info.get('archive_name')))
             if collection_timestamp <= start_time:
                 last_file = archive_info.get('archive_name')
                 continue
@@ -517,7 +507,8 @@ class ComponentHandler(object):
             archive_file_list.insert(0, last_file)
         return archive_file_list
 
-    def _get_metric_model(self, metric_list, labels, metric_values, obj_cap, resources_type):
+    def _get_metric_model(self, metric_list, labels, metric_values, obj_cap,
+                          resources_type):
         metric_model_list = []
         tools = Tools()
         for metric_name in (metric_list or []):
@@ -527,9 +518,11 @@ class ComponentHandler(object):
             for metric_value in metric_values:
                 value = None
                 metric_value_infos = metric_value.split(',')
-                if consts.METRIC_MAP.get(resources_type) and consts.METRIC_MAP.get(resources_type).get(metric_name):
-                    value = metric_value_infos[consts.METRIC_MAP.get(resources_type).get(metric_name)]
-                    # print('{}=={}=={}=={}'.format(resources_type,metric_name,consts.METRIC_MAP.get(resources_type).get(metric_name),value))
+                if consts.METRIC_MAP.get(
+                        resources_type) and consts.METRIC_MAP.get(
+                        resources_type).get(metric_name):
+                    value = metric_value_infos[
+                        consts.METRIC_MAP.get(resources_type).get(metric_name)]
                     if value is not None:
                         collection_timestamp = tools.time_str_to_timestamp(
                             metric_value_infos[1], consts.TIME_PATTERN)
@@ -571,59 +564,67 @@ class ComponentHandler(object):
             resources_map[volume_name] = str(volume.get('logical_unit_number'))
             resources_type_map[volume_name] = constants.ResourceType.VOLUME
 
-    def _filter_performance_data(self, archive_file_list, resources_map, start_time, end_time):
+    def _filter_performance_data(self, archive_file_list, resources_map,
+                                 start_time, end_time):
         performance_lines_map = {}
-        tools = Tools()
-        for archive_file in (archive_file_list or []):
-            self.navi_handler.download_archives(archive_file)
-            # 解析性能文件cvs
-            file_path = '%s%s' % (consts.ARCHIVE_FILE_DIR, archive_file)
-            print(file_path)
-            file_path = '%s%s' % (
-            consts.ARCHIVE_FILE_DIR, "20210708_____vnx_file78.csv")
-            with open(file_path) as file:
-                for line in file:
-                    lines = line.split(',')
-                    resource_obj_name = lines[0]
-                    if 'Port ' in resource_obj_name:
-                        resource_obj_name = re.sub('(\[.*;)', '[',
-                                                   resource_obj_name)
-                    elif '; ' in resource_obj_name:
-                        resource_obj_name = re.sub('(; .*])', ']',
-                                                   resource_obj_name)
-                    # 过滤出需要的性能数据
-                    if resources_map:
-                        if resource_obj_name in resources_map.keys():
-                            # print('{}==={}'.format(resource_obj_name, line))
-                            # 判断时间范围
-                            obj_collection_timestamp = tools.time_str_to_timestamp(
-                                lines[1], consts.TIME_PATTERN)
-                            # print('{}=={}=={}'.format(resource_obj_name, obj_collection_timestamp, lines))
-                            if start_time <= obj_collection_timestamp and obj_collection_timestamp <= end_time:
-                                # print('{}=={}=={}'.format(resource_obj_name, obj_collection_timestamp, lines))
-                                if performance_lines_map.get(
-                                        resource_obj_name):
-                                    performance_lines_map.get(
-                                        resource_obj_name).append(line)
-                                else:
-                                    obj_performance_list = []
-                                    obj_performance_list.append(line)
-                                    performance_lines_map[
-                                        resource_obj_name] = obj_performance_list
+        try:
+            tools = Tools()
+            for archive_file in (archive_file_list or []):
+                self.navi_handler.download_archives(archive_file)
+                archive_name_infos = archive_file.split('.')
+                file_path = '%s%s.csv' % (
+                    consts.ARCHIVE_FILE_DIR, archive_name_infos[0])
+                with open(file_path) as file:
+                    for line in file:
+                        lines = line.split(',')
+                        resource_obj_name = lines[0]
+                        if 'Port ' in resource_obj_name:
+                            resource_obj_name = re.sub('(\\[.*;)', '[',
+                                                       resource_obj_name)
+                        elif '; ' in resource_obj_name:
+                            resource_obj_name = re.sub('(; .*])', ']',
+                                                       resource_obj_name)
+                        if resources_map:
+                            if resource_obj_name in resources_map.keys():
+                                obj_collection_timestamp = \
+                                    tools.time_str_to_timestamp(
+                                        lines[1], consts.TIME_PATTERN)
+                                if start_time <= obj_collection_timestamp and \
+                                        obj_collection_timestamp <= end_time:
+                                    if performance_lines_map.get(
+                                            resource_obj_name):
+                                        performance_lines_map.get(
+                                            resource_obj_name).append(line)
+                                    else:
+                                        obj_performance_list = []
+                                        obj_performance_list.append(line)
+                                        performance_lines_map[
+                                            resource_obj_name] = \
+                                            obj_performance_list
+        except Exception as err:
+            err_msg = "Failed to filter performance data: %s" % \
+                      (six.text_type(err))
+            LOG.error(err_msg)
+            raise exception.StorageBackendException(err_msg)
         return performance_lines_map
 
     def _remove_archive_file(self, archive_file_list):
-        for archive_file in archive_file_list:
-            file_path = '%s%s' % (consts.ARCHIVE_FILE_DIR, archive_file)
-            print('删除性能文件=={}'.format(file_path))
-            file_path = '%s%s' % (
-            consts.ARCHIVE_FILE_DIR, "20210708_____vnx_file78.csv")
-            if os.path.exists(file_path):  # 如果文件存在
-                # 删除文件，可使用以下两种方法。
-                os.remove(file_path)
-                # os.unlink(path)
-            else:
-                err_msg = 'no such file:%s' % file_path
-                print(err_msg)  # 则返回文件不存在
-                LOG.error(err_msg)
-                raise exception.StorageBackendException(err_msg)
+        try:
+            for archive_file in archive_file_list:
+                nar_file_path = '%s%s' % (
+                    consts.ARCHIVE_FILE_DIR, archive_file)
+                archive_name_infos = archive_file.split('.')
+                csv_file_path = '%s%s.csv' % (
+                    consts.ARCHIVE_FILE_DIR, archive_name_infos[0])
+                for file_path in [nar_file_path, csv_file_path]:
+                    if os.path.exists(file_path):
+                        os.remove(nar_file_path)
+                    else:
+                        err_msg = 'no such file:%s' % file_path
+                        LOG.error(err_msg)
+                        raise exception.StorageBackendException(err_msg)
+        except Exception as err:
+            err_msg = "Failed to remove archive file: %s" % \
+                      (six.text_type(err))
+            LOG.error(err_msg)
+            raise exception.StorageBackendException(err_msg)
