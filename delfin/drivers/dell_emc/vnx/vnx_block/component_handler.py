@@ -516,7 +516,6 @@ class ComponentHandler(object):
             obj_labels = copy.deepcopy(labels)
             obj_labels['unit'] = obj_cap.get(metric_name).get('unit')
             for metric_value in metric_values:
-                value = None
                 metric_value_infos = metric_value.split(',')
                 if consts.METRIC_MAP.get(
                         resources_type) and consts.METRIC_MAP.get(

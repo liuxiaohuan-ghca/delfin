@@ -832,7 +832,6 @@ class TestVnxBlocktorageDriver(TestCase):
         metrics = driver.collect_perf_metrics(context, '12345',
                                               resource_metrics, start_time,
                                               end_time)
-        print('test metrics==={}'.format(metrics))
         self.assertEqual(metrics[0], METRICS_RESULT[0])
         self.assertEqual(metrics[14], METRICS_RESULT[1])
         self.assertEqual(metrics[20], METRICS_RESULT[2])
