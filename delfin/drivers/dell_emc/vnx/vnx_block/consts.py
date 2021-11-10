@@ -293,5 +293,4 @@ GET_ARCHIVE_API = 'analyzer -archive -list'
 DOWNLOAD_ARCHIVE_API = 'analyzer -archiveretrieve -file %s' \
                        ' -location D:\\ -overwrite y -retry 3'
 ARCHIVEDUMP_API = 'analyzer -archivedump –data %s –out %s.csv'
-ARCHIVE_FILE_DIR = "D:\\documents\\20201019异构存储开发--EMC\\" \
-                   "20210420-第三方设备接口测试数据\\"
+ARCHIVE_FILE_DIR = "D:\\tmp\\"

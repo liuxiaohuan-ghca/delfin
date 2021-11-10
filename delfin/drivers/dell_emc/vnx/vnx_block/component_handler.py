@@ -534,7 +534,6 @@ class ComponentHandler(object):
         return metric_model_list
 
     def _get_resources_map(self, resources_map, resources_type_map):
-        # 取得存储中需要性能数据的所有资源对象
         controllers = self.navi_handler.get_controllers()
         for controller in (controllers or []):
             resources_map[controller.get('sp_name')] = controller.get(
@@ -557,7 +556,6 @@ class ComponentHandler(object):
             resources_type_map[disk_name] = constants.ResourceType.DISK
         volumes = self.navi_handler.get_all_lun()
         for volume in (volumes or []):
-            # LUN_to_Vplex_KLM_test_1 [230; RAID 5; VPLEX_Gateway]
             volume_name = '%s [%s]' % (
                 volume.get('name'), volume.get('logical_unit_number'))
             resources_map[volume_name] = str(volume.get('logical_unit_number'))
