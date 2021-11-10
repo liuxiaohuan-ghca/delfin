@@ -552,7 +552,7 @@ class ComponentHandler(object):
         disks = self.navi_handler.get_disks()
         for disk in (disks or []):
             disk_name = disk.get('disk_name')
-            disk_name = disk_name.replace(' Disk', 'Disk')
+            disk_name = disk_name.replace('  Disk', ' Disk')
             resources_map[disk_name] = disk.get('disk_id')
             resources_type_map[disk_name] = constants.ResourceType.DISK
         volumes = self.navi_handler.get_all_lun()
