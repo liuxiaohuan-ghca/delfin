@@ -290,6 +290,7 @@ METRIC_MAP = {
     }
 }
 GET_ARCHIVE_API = 'analyzer -archive -list'
-DOWNLOAD_ARCHIVE_API = 'analyzer -archiveretrieve -file %s -location D:\ -overwrite y -retry 3'
+DOWNLOAD_ARCHIVE_API = 'analyzer -archiveretrieve -file %s' \
+                       ' -location D:\\ -overwrite y -retry 3'
 ARCHIVEDUMP_API = 'analyzer -archivedump –data %s –out %s.csv'
-BLOCK_SIZE = 2048
+ARCHIVE_FILE_DIR = "D:\\tmp\\"

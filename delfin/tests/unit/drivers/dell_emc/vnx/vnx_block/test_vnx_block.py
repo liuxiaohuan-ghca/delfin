@@ -11,9 +11,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import os
 import sys
 import time
 from unittest import TestCase, mock
+
+from mock import patch, mock_open
 
 from delfin.common import constants
 from delfin.drivers.dell_emc.vnx.vnx_block import consts
@@ -58,7 +61,7 @@ Port: 80
 Secure Port: 443
 """
 DISK_INFOS = """
-        Bus 0 Enclosure 0  Disk 0
+        Bus 0 Enclosur 0  Disk 0
         State:                   Enabled
         Capacity:                54969
         """
@@ -93,7 +96,7 @@ LUN_INFOS = """
         """
 GET_ALL_LUN_INFOS = """
         LOGICAL UNIT NUMBER 230
-        Name                        LUN_to_Vplex_KLM_test_1
+        Name                        L1
         RAIDGroup ID:               1
         State:                      Bound
         LUN Capacity(Megabytes):    10240
@@ -115,7 +118,7 @@ Valid To: 20190405135111Z
         """
 
 DISK_DATAS = """
-        Bus 0 Enclosure 0  Disk 0
+        Bus 0 Enclosur 0  Disk 0
         Vendor Id:               HITACHI
         Product Id:              HUC10906 CLAR600
         Product Revision:        C430
@@ -168,7 +171,7 @@ Information about each SPPORT:
 
 SP Name:             SP A
 SP Port ID:          6
-SP UID:              50:06:01:60:88:60:24:1E:50:06:01:66:08:60:24:1E
+SP UID:              50:08:1E
 Link Status:         Up
 Port Status:         Online
 Switch Present:      YES
@@ -357,13 +360,41 @@ I/O Module Type :  SAS
 
 ARCHIVE_DATAS = """
 Index Size in KB     Last Modified            Filename
-812   2746      07/08/2021 01:20:29  CETV2135000041_SPA_2021-07-07_17-20-26-GMT_P08-00.nar
-813   2740      07/08/2021 03:56:28  CETV2135000041_SPA_2021-07-07_19-56-25-GMT_P08-00.nar
-814   2731      07/08/2021 06:32:29  CETV2135000041_SPA_2021-07-07_22-32-26-GMT_P08-00.nar
-815   2702      07/08/2021 09:08:29  CETV2135000041_SPA_2021-07-08_01-08-26-GMT_P08-00.nar
-816   2776      07/08/2021 11:44:29  CETV2135000041_SPA_2021-07-08_03-44-26-GMT_P08-00.nar
-817   2848      07/08/2021 14:20:28  CETV2135000041_SPA_2021-07-08_06-20-26-GMT_P08-00.nar
-818   2334      07/08/2021 16:31:13  CETV2135000041_SPA_2021-07-08_08-31-11-GMT_P08-00.nar
+2 46 07/08/2021 01:20:29  CETV2135000041_SPA_2021-07-07_17-20-26-GMT_P08-00.nar
+3 40 07/08/2021 03:56:28  CETV2135000041_SPA_2021-07-07_19-56-25-GMT_P08-00.nar
+4 31 07/08/2021 06:32:29  CETV2135000041_SPA_2021-07-07_22-32-26-GMT_P08-00.nar
+5 02 07/08/2021 09:08:29  CETV2135000041_SPA_2021-07-08_01-08-26-GMT_P08-00.nar
+6 76 07/08/2021 11:44:29  CETV2135000041_SPA_2021-07-08_03-44-26-GMT_P08-00.nar
+7 48 07/08/2021 14:20:28  CETV2135000041_SPA_2021-07-08_06-20-26-GMT_P08-00.nar
+8 34 07/08/2021 16:31:13  CETV2135000041_SPA_2021-07-08_08-31-11-GMT_P08-00.nar
+"""
+PERFORMANCE_FILE = """
+SP A,07/08/2021 12:15:56,,,,,,,,,0,,,0,,,0,,,0,,,0,,,0,,,0,,,0,,,0\n
+SP A,07/08/2021 12:16:56,,,,,,,,,0,,,0,,,0,,,0,,,0,,,0,,,0,,,0,,,0\n
+SP A,07/08/2021 12:17:55,,,,,,,,,0,,,0,,,0,,,0,,,0,,,0,,,0,,,0,,,0\n
+SP A,07/08/2021 12:18:56,,,,,,,,,0,,,0.28,,,0.73,,,0,,,0,,,0,,,0.28,,,,,,0.73\n
+SP A,07/08/2021 12:19:56,,,,,,,,,0,,,0,,,0,,,0,,,0,,,0,,,0,,,0,,,0\n
+SP B,07/08/2021 12:15:56,,,,,,,,,0,,,0.9,,,2.6,,,0.9,,,2.4,,,1,,,0.7,,,,,,0.2\n
+SP B,07/08/2021 12:16:56,,,,,,,,,0,,,0.1,,,5.6,,,0.2,,,6.7,,,2,,,1.6,,,,,,1.4\n
+SP B,07/08/2021 12:17:55,,,,,,,,,0,,,0.2,,,4.6,,,0.3,,,1.7,,,3,,,2.6,,,,,,2.4\n
+SP B,07/08/2021 12:18:56,,,,,,,,,0,,,0.3,,,6.6,,,0.4,,,2.7,,,4,,,3.6,,,,,,3.4\n
+SP B,07/08/2021 12:19:56,,,,,,,,,0,,,0.4,,,7.6,,,0.5,,,3.7,,,5,,,4.6,,,,,,4.4\n
+L1 [230],07/08/2021 12:15:56,,,,,,,,,,,,,,,0,,,,,,,,,,,,,,,,,,,,,,,,,,,\n
+L1 [230],07/08/2021 12:16:56,,,,,,,,,,,,,,,0,,,,,,,,,,,,,,,,,,,,,,,,,,,\n
+L1 [230],07/08/2021 12:17:55,,,,,,,,,,,,,,,0,,,,,,,,,,,,,,,,,,,,,,,,,,,\n
+L1 [230],07/08/2021 12:18:56,,,,,,,,,,,,,,,0,,,,,,,,,,,,,,,,,,,,,,,,,,,\n
+L1 [230],07/08/2021 12:19:56,,,,,,,,,,,,,,,0,,,,,,,,,,,,,,,,,,,,,,,,,,,\n
+Bus 0 Enclosur 0 Disk 0,07/08/2021 12:15:56,,,,,,,,,,,,,,,3,,,,,,,,,,,,,,,,,,\n
+Bus 0 Enclosur 0 Disk 0,07/08/2021 12:16:56,,,,,,,,,,,,,,,4,,,,,,,,,,,,,,,,,,\n
+Bus 0 Enclosur 0 Disk 0,07/08/2021 12:17:55,,,,,,,,,,,,,,,5,,,,,,,,,,,,,,,,,,\n
+Bus 0 Enclosur 0 Disk 0,07/08/2021 12:18:56,,,,,,,,,,,,,,,6,,,,,,,,,,,,,,,,,,\n
+Bus 0 Enclosur 0 Disk 0,07/08/2021 12:19:56,,,,,,,,,,,,,,,6,,,,,,,,,,,,,,,,,,\n
+Port 6 [FC; 50:08:1E ],07/08/2021 12:15:56,,,,,,,,,,,,,,,2,,,,,,,,,,,,,,,,,,\n
+Port 6 [FC; 50:08:1E ],07/08/2021 12:16:56,,,,,,,,,,,,,,,3,,,,,,,,,,,,,,,,,,\n
+Port 6 [FC; 50:08:1E ],07/08/2021 12:17:55,,,,,,,,,,,,,,,4,,,,,,,,,,,,,,,,,,\n
+Port 6 [FC; 50:08:1E ],07/08/2021 12:18:56,,,,,,,,,,,,,,,5,,,,,,,,,,,,,,,,,,\n
+Port 6 [FC; 50:08:1E ],07/08/2021 12:19:56,,,,,,,,,,,,,,,6,,,,,,,,,,,,,,,,,,\n
+
 """
 
 AGENT_RESULT = {
@@ -418,8 +449,8 @@ RAID_RESULT = [
     }]
 ALL_LUN_RESULT = [
     {
-        'logical_unit_number': '186',
-        'name': 'LN_10G_01',
+        'logical_unit_number': '230',
+        'name': 'L1',
         'raidgroup_id': '1',
         'state': 'Bound',
         'lun_capacitymegabytes': '10240',
@@ -475,9 +506,9 @@ ALERT_RESULT = {
 }
 DISK_RESULT = [
     {
-        'name': 'Bus 0 Enclosure 0  Disk 0',
+        'name': 'Bus 0 Enclosur 0  Disk 0',
         'storage_id': '12345',
-        'native_disk_id': 'Bus0Enclosure0Disk0',
+        'native_disk_id': 'Bus0Enclosur0Disk0',
         'serial_number': 'KSJEX35J',
         'manufacturer': 'HITACHI',
         'model': 'HUC10906 CLAR600',
@@ -489,7 +520,7 @@ DISK_RESULT = [
         'logical_type': 'unknown',
         'health_score': None,
         'native_disk_group_id': None,
-        'location': 'Bus 0 Enclosure 0  Disk 0'
+        'location': 'Bus 0 Enclosur 0  Disk 0'
     }]
 SP_RESULT = [
     {
@@ -525,13 +556,68 @@ PORT_RESULT = [
         'speed': 8000000000,
         'max_speed': 8000000000,
         'native_parent_id': None,
-        'wwn': '50:06:01:60:88:60:24:1E:50:06:01:66:08:60:24:1E',
+        'wwn': '50:08:1E',
         'mac_address': None,
         'ipv4': '172.20.2.140',
         'ipv4_mask': '255.255.255.0',
         'ipv6': None,
         'ipv6_mask': None
     }]
+
+METRICS_RESULT = [
+    constants.metric_struct(name='iops', labels={
+        'storage_id': '12345',
+        'resource_type': 'controller',
+        'resource_id': '3600485',
+        'type': 'RAW',
+        'unit': 'IOPS'
+    }, values={
+        1625717756000: '0',
+        1625717816000: '0',
+        1625717875000: '0',
+        1625717936000: '0.73',
+        1625717996000: '0'
+    }),
+    constants.metric_struct(name='iops', labels={
+        'storage_id': '12345',
+        'resource_type': 'port',
+        'resource_id': 'A-6',
+        'type': 'RAW',
+        'unit': 'IOPS'
+    }, values={
+        1625717756000: '2',
+        1625717816000: '3',
+        1625717875000: '4',
+        1625717936000: '5',
+        1625717996000: '6'
+    }),
+    constants.metric_struct(name='iops', labels={
+        'storage_id': '12345',
+        'resource_type': 'disk',
+        'resource_id': 'Bus0Enclosur0Disk0',
+        'type': 'RAW',
+        'unit': 'IOPS'
+    }, values={
+        1625717756000: '3',
+        1625717816000: '4',
+        1625717875000: '5',
+        1625717936000: '6',
+        1625717996000: '6'
+    }),
+    constants.metric_struct(name='iops', labels={
+        'storage_id': '12345',
+        'resource_type': 'volume',
+        'resource_id': '230',
+        'type': 'RAW',
+        'unit': 'IOPS'
+    }, values={
+        1625717756000: '0',
+        1625717816000: '0',
+        1625717875000: '0',
+        1625717936000: '0',
+        1625717996000: '0'
+    })
+]
 
 
 def create_driver():
@@ -709,7 +795,8 @@ class TestVnxBlocktorageDriver(TestCase):
         ports = self.driver.list_ports(context)
         self.assertDictEqual(ports[0], PORT_RESULT[0])
 
-    def test_get_perf_metrics(self):
+    @patch("builtins.open", new_callable=mock_open, read_data=PERFORMANCE_FILE)
+    def test_get_perf_metrics(self, mock_file):
         driver = create_driver()
         resource_metrics = {
             'controller': [
@@ -735,18 +822,20 @@ class TestVnxBlocktorageDriver(TestCase):
                 'responseTime'
             ]
         }
-        start_time = 1625717756000 # 1618096539000  1625717756000
-        end_time = 1625717996000  # 1618115258000  1625717996000
+        start_time = 1625717756000
+        end_time = 1625717996000
         NaviClient.exec = mock.Mock(
-            side_effect=[ARCHIVE_DATAS, SP_DATAS, PORT_DATAS, DISK_DATAS, GET_ALL_LUN_INFOS, '', ''])
+            side_effect=[ARCHIVE_DATAS, SP_DATAS, PORT_DATAS, DISK_DATAS,
+                         GET_ALL_LUN_INFOS, '', ''])
+        os.path.exists = mock.Mock(return_value=True)
+        os.remove = mock.Mock(return_value=True)
         metrics = driver.collect_perf_metrics(context, '12345',
                                               resource_metrics, start_time,
                                               end_time)
-        print('test metrics==={}'.format(metrics))
-        # self.assertEqual(metrics[0], METRICS_RESULT[0])
-        # self.assertEqual(metrics[13], METRICS_RESULT[2])
-        # self.assertEqual(metrics[23], METRICS_RESULT[3])
-        # self.assertEqual(metrics[29], METRICS_RESULT[4])
+        self.assertEqual(metrics[0], METRICS_RESULT[0])
+        self.assertEqual(metrics[14], METRICS_RESULT[1])
+        self.assertEqual(metrics[20], METRICS_RESULT[2])
+        self.assertEqual(metrics[27], METRICS_RESULT[3])
 
     def test_get_capabilities(self):
         driver = create_driver()

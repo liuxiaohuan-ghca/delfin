@@ -154,8 +154,7 @@ class NaviHandler(object):
             resource_info = self.navi_exe(command_str.split())
             return_value = None
             if resource_info:
-                if analyse_type:
-                    return_value = analyse_type(resource_info)
+                return_value = analyse_type(resource_info)
         except Exception as e:
             err_msg = "Failed to get resources info from %s: %s" \
                       % (sub_command, six.text_type(e))
@@ -620,9 +619,10 @@ class NaviHandler(object):
                 str_line = obj_info.strip()
                 if str_line:
                     archive_infos = str_line.split()
-                    if archive_infos and len(archive_infos)==5:
+                    if archive_infos and len(archive_infos) == 5:
                         obj_model = {}
-                        obj_model['collection_time'] = "%s %s" % (archive_infos[2], archive_infos[3])
+                        obj_model['collection_time'] =\
+                            "%s %s" % (archive_infos[2], archive_infos[3])
                         obj_model['archive_name'] = archive_infos[4]
                         obj_list.append(obj_model)
         except Exception as e:
@@ -635,5 +635,6 @@ class NaviHandler(object):
         download_archive_api = consts.DOWNLOAD_ARCHIVE_API % archive_name
         self.get_resources_info(download_archive_api, None)
         archive_name_infos = archive_name.split('.')
-        archivedump_api = consts.ARCHIVEDUMP_API % (archive_name, archive_name_infos[0])
+        archivedump_api = consts.ARCHIVEDUMP_API % (archive_name,
+                                                    archive_name_infos[0])
         self.get_resources_info(archivedump_api, None)
